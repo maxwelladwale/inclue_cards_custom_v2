@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_dashboard_component_form" model="ir.ui.view">
+        <field name="name">dashboard.custom.component.form</field>
+        <field name="model">dashboard.custom.component</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="component_type"/>
+                        <field name="sequence"/>
+                        <field name="is_active"/>
+                    </group>
+                    <notebook>
+                        <page string="Card Settings" attrs="{'invisible': [('component_type', '!=', 'card')]}">
+                            <group>
+                                <field name="icon" attrs="{'required': [('component_type', '=', 'card')]}"/>
+                                <field name="card_value"/>
+                                <field name="card_subtitle"/>
+                                <field name="card_color"/>
+                            </group>
+                        </page>
+                        <page string="Data Source" attrs="{'invisible': [('component_type', '!=', 'card')]}">
+                            <group>
+                                <field name="model_id"/>
+                                <field name="calculation_type"/>
+                                <field name="count_field" attrs="{'invisible': [('calculation_type', '=', 'count')], 'required': [('calculation_type', 'in', ['sum', 'avg'])]}"/>
+                                <field name="domain"/>
+                                <field name="formula" attrs="{'invisible': [('calculation_type', '!=', 'formula')], 'required': [('calculation_type', '=', 'formula')]}"/>
+                            </group>
+                            <!-- New group for iN-Clue specific fields -->
+                            <group string="iN-Clue Specific" attrs="{'invisible': [('calculation_type', 'not in', ['completion_rate', 'facilitator_performance'])]}">
+                                <field name="facilitator_id" attrs="{'invisible': [('calculation_type', 'not in', ['completion_rate', 'facilitator_performance'])]}"/>
+                                <field name="session_type" attrs="{'invisible': [('calculation_type', 'not in', ['completion_rate', 'facilitator_performance'])]}"/>
+                            </group>
+                        </page>
+                        <page string="Widget Content" attrs="{'invisible': [('component_type', '=', 'card')]}">
+                            <field name="content"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_dashboard_component_tree" model="ir.ui.view">
+        <field name="name">dashboard.custom.component.tree</field>
+        <field name="model">dashboard.custom.component</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="component_type"/>
+                <field name="is_active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_dashboard_components" model="ir.actions.act_window">
+        <field name="name">Dashboard Components</field>
+        <field name="res_model">dashboard.custom.component</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_dashboard_components" 
+              name="Dashboard Components"
+              action="action_dashboard_components"
+              parent="website.menu_website_configuration"
+              sequence="30"/>
+</odoo>
+
+<!-- <?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_dashboard_component_form" model="ir.ui.view">
+        <field name="name">dashboard.custom.component.form</field>
+        <field name="model">dashboard.custom.component</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="component_type"/>
+                        <field name="sequence"/>
+                        <field name="is_active"/>
+                    </group>
+                    <notebook>
+                        <page string="Card Settings" attrs="{'invisible': [('component_type', '!=', 'card')]}">
+                            <group>
+                                <field name="icon" attrs="{'required': [('component_type', '=', 'card')]}"/>
+                                <field name="card_value"/>
+                                <field name="card_subtitle"/>
+                                <field name="card_color"/>
+                            </group>
+                        </page>
+                        <page string="Data Source" attrs="{'invisible': [('component_type', '!=', 'card')]}">
+                            <group>
+                                <field name="model_id"/>
+                                <field name="calculation_type"/>
+                                <field name="count_field" attrs="{'invisible': [('calculation_type', '=', 'count')], 'required': [('calculation_type', 'in', ['sum', 'avg'])]}"/>
+                                <field name="domain"/>
+                                <field name="formula" attrs="{'invisible': [('calculation_type', '!=', 'formula')], 'required': [('calculation_type', '=', 'formula')]}"/>
+                            </group>
+                        </page>
+                        <page string="Widget Content" attrs="{'invisible': [('component_type', '=', 'card')]}">
+                            <field name="content"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_dashboard_component_tree" model="ir.ui.view">
+        <field name="name">dashboard.custom.component.tree</field>
+        <field name="model">dashboard.custom.component</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="component_type"/>
+                <field name="is_active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_dashboard_components" model="ir.actions.act_window">
+        <field name="name">Dashboard Components</field>
+        <field name="res_model">dashboard.custom.component</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem id="menu_dashboard_components" 
+              name="Dashboard Components"
+              action="action_dashboard_components"
+              parent="website.menu_website_configuration"
+              sequence="30"/>
+</odoo> -->

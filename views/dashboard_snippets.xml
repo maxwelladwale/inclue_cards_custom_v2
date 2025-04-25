@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Create a template for the snippet -->
+    <template id="dashboard_snippet_template" name="Dashboard Widget">
+        <section class="dashboard-component">
+            <div class="container">
+                <div class="row">
+                    <t t-foreach="request.env['dashboard.custom.component'].search([('is_active', '=', True), ('component_type', '=', 'card')], order='sequence')" t-as="component">
+                        <div class="col-md-3 mb-4">
+                            <t t-call="dashboard_custom.dashboard_card_component_template"/>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <!-- Add snippet to the blocks panel -->
+    <template id="dashboard_snippets" inherit_id="website.snippets">
+        <xpath expr="//div[@id='snippet_structure']" position="inside">
+            <div class="o_panel_body">
+                <t t-snippet="dashboard_custom.dashboard_snippet_template"
+                   t-thumbnail="/dashboard_custom/static/description/icon.png"/>
+            </div>
+        </xpath>
+    </template>
+
+    <!-- Add options for the snippet -->
+    <template id="dashboard_options" inherit_id="website.snippet_options">
+        <xpath expr="." position="inside">
+            <div data-js="dashboard_widget" data-selector=".dashboard-component">
+                <we-colorpicker string="Background Color" data-name="bg_color_opt" data-select-style="true" data-css-property="background-color" data-color-prefix="bg-"/>
+                <we-colorpicker string="Text Color" data-name="text_color_opt" data-select-style="true" data-css-property="color" data-color-prefix="text-"/>
+            </div>
+        </xpath>
+    </template>
+</odoo>
