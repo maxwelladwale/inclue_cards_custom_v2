@@ -13,6 +13,16 @@
             </div>
         </div>
     </template>
+
+    <template id="dashboard_snippet_content" name="Dashboard Snippet Content">
+        <div class="row">
+            <t t-foreach="components" t-as="component">
+                <div class="col-md-3 mb-4">
+                    <t t-call="dashboard_custom.dashboard_card_component_template"/>
+                </div>
+            </t>
+        </div>
+    </template>
     
     <!-- This is where you could define templates for rendering dashboard components -->
     <template id="dashboard_component_template">

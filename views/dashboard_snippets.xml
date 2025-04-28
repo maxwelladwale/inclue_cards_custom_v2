@@ -1,5 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
+    <!-- Update your existing template -->
+    <template id="dashboard_snippet_template" name="Dashboard Widget">
+        <section class="dashboard-component">
+            <div class="container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="m-0">Dashboard</h3>
+                    <button class="btn btn-sm btn-outline-secondary dashboard-refresh-btn">
+                        <i class="fa fa-refresh"></i> Refresh
+                    </button>
+                </div>
+                <div class="dashboard-content">
+                    <div class="row">
+                        <t t-foreach="request.env['dashboard.custom.component'].search([('is_active', '=', True), ('component_type', '=', 'card')], order='sequence')" t-as="component">
+                            <div class="col-md-3 mb-4">
+                                <t t-call="dashboard_custom.dashboard_card_component_template"/>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </template>
     <!-- Create a template for the snippet -->
     <template id="dashboard_snippet_template" name="Dashboard Widget">
         <section class="dashboard-component">
