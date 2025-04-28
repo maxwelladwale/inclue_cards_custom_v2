@@ -2,8 +2,6 @@ from odoo import models, fields, api
 from odoo.tools.safe_eval import safe_eval
 import datetime
 from dateutil.relativedelta import relativedelta
-from odoo import http
-from odoo.http import request
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -317,18 +315,3 @@ class DashboardComponent(models.Model):
         else:
             # Default to events count if no field specified
             return str(len(events))
-        
-    @http.route('/dashboard/refresh_data', type='json', auth='user', website=True)
-    def refresh_dashboard_data(self):
-        # Get all active dashboard components
-        components = request.env['dashboard.custom.component'].search([
-            ('is_active', '=', True),
-            ('component_type', '=', 'card')
-        ])
-        
-        # Build result dictionary with component ID and calculated value
-        result = {}
-        for component in components:
-            result[component.id] = component._compute_card_data()
-            
-        return result
