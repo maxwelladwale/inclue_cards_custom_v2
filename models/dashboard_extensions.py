@@ -1,5 +1,5 @@
-from odoo import models, fields, api
-from datetime import datetime, timedelta
+from odoo import models, fields  # Removed unused 'api'
+# Removed unused imports
 import logging
 
 _logger = logging.getLogger(__name__)
@@ -49,6 +49,43 @@ class DashboardComponent(models.Model):
             _logger.error(f"Error in iN-Clue dashboard calculation: {str(e)}")
             return f"Error: {str(e)[:20]}"
     
+    # def _compute_completion_rate(self):
+    #     """Calculate survey completion rate"""
+    #     domain = []
+
+    #     # Apply base domain if specified
+    #     if self.domain and self.domain != "[]":
+    #         try:
+    #             from odoo.tools.safe_eval import safe_eval  # Adjusted indentation
+    #             base_domain = safe_eval(self.domain)
+    #             domain.extend(base_domain)
+    #         except Exception as e:
+    #             _logger.error(f"Domain Error: {str(e)[:20]}")
+    #             return f"Domain Error: {str(e)[:20]}"
+
+    #     # Apply facilitator filter if specified
+    #     if self.facilitator_id:
+    #         domain.append(('facilitator_id', '=', self.facilitator_id.id))
+        
+    #     # Apply session type filter if specified
+    #     if self.session_type == 'kickoff':
+    #         domain.append(('session_type', '=', 'kickoff'))
+    #     elif self.session_type == 'followup':
+    #         domain.append(('session_type', '!=', 'kickoff'))  # Explicitly avoid 'kickoff'
+
+    #     # Get the participation records
+    #     participations = self.env['inclue.participation'].search(domain)
+
+    #     if not participations:
+    #         return "0%"
+
+    #     # Calculate completion rate
+    #     total = len(participations)
+    #     completed = len(participations.filtered(lambda p: p.completed))
+
+    #     completion_rate = (completed / total) * 100 if total > 0 else 0
+    #     return f"{round(completion_rate)}%"
+
     def _compute_completion_rate(self):
         """Calculate survey completion rate"""
         domain = []
@@ -56,11 +93,23 @@ class DashboardComponent(models.Model):
         # Apply base domain if specified
         if self.domain and self.domain != "[]":
             try:
-                from odoo.tools.safe_eval import safe_eval
-                base_domain = safe_eval(self.domain)
-                domain.extend(base_domain)
+                # Create evaluation context
+                today_date = fields.Date.today()
+                now_datetime = fields.Datetime.now()
+                
+                eval_context = {
+                    'datetime': datetime,
+                    'relativedelta': relativedelta,
+                    'date': datetime.date,
+                    'today': today_date,
+                    'now': now_datetime,
+                    'uid': self.env.uid,
+                    'user': self.env.user,
+                }
+                domain = safe_eval(self.domain, eval_context)
             except Exception as e:
-                return f"Domain Error: {str(e)[:20]}"
+                _logger.error(f"Domain evaluation error in completion rate: {str(e)}")
+                # Continue with empty domain rather than failing
         
         # Apply facilitator filter if specified
         if self.facilitator_id:
@@ -71,9 +120,23 @@ class DashboardComponent(models.Model):
             domain.append(('session_type', '=', 'kickoff'))
         elif self.session_type == 'followup':
             domain.append(('session_type', '!=', 'kickoff'))
+            
+        # Add user filter if enabled
+        if self.filter_by_current_user:
+            # For inclue.participation, filter by facilitator if user is a facilitator
+            if self.env.user.partner_id.is_facilitator:
+                domain.append(('facilitator_id', '=', self.env.user.partner_id.id))
         
         # Get the participation records
-        participations = self.env['inclue.participation'].search(domain)
+        try:
+            # Check if model exists
+            if 'inclue.participation' not in self.env:
+                return "Model Not Found"
+                
+            participations = self.env['inclue.participation'].search(domain)
+        except Exception as e:
+            _logger.error(f"Search error in completion rate: {str(e)}")
+            return "Error"
         
         if not participations:
             return "0%"
@@ -84,7 +147,51 @@ class DashboardComponent(models.Model):
         
         completion_rate = (completed / total) * 100 if total > 0 else 0
         return f"{round(completion_rate)}%"
-    
+    # def _compute_facilitator_performance(self):
+    #     """Calculate facilitator performance metrics"""
+    #     domain = []
+
+    #     # Apply base domain if specified
+    #     if self.domain and self.domain != "[]":
+    #         try:
+    #             from odoo.tools.safe_eval import safe_eval
+    #             base_domain = safe_eval(self.domain)
+    #             domain.extend(base_domain)
+    #         except Exception as e:
+    #             _logger.error(f"Domain Error: {str(e)[:20]}")
+    #             return f"Domain Error: {str(e)[:20]}"
+
+    #     # Apply facilitator filter if specified
+    #     if self.facilitator_id:
+    #         domain.append(('facilitator_id', '=', self.facilitator_id.id))
+
+    #     # Get the participation records
+    #     participations = self.env['inclue.participation'].search(domain)
+
+    #     if not participations:
+    #         return "0"
+
+    #     # Get unique events facilitated
+    #     events = participations.mapped('event_id')
+        
+    #     # Get unique participants
+    #     participants = participations.mapped('partner_id')
+        
+    #     # Calculate completion rate
+    #     total = len(participations)
+    #     completed = len(participations.filtered(lambda p: p.completed))
+    #     completion_rate = (completed / total) * 100 if total > 0 else 0
+        
+    #     # Return the score based on what field is set to count
+    #     if self.count_field == 'events':
+    #         return str(len(events))
+    #     elif self.count_field == 'participants':
+    #         return str(len(participants))
+    #     elif self.count_field == 'completion_rate':
+    #         return f"{round(completion_rate)}%"
+    #     else:
+    #         return str(len(events))  # Default to events count if no field specified
+
     def _compute_facilitator_performance(self):
         """Calculate facilitator performance metrics"""
         domain = []
@@ -92,18 +199,41 @@ class DashboardComponent(models.Model):
         # Apply base domain if specified
         if self.domain and self.domain != "[]":
             try:
-                from odoo.tools.safe_eval import safe_eval
-                base_domain = safe_eval(self.domain)
-                domain.extend(base_domain)
+                # Create evaluation context
+                today_date = fields.Date.today()
+                now_datetime = fields.Datetime.now()
+                
+                eval_context = {
+                    'datetime': datetime,
+                    'relativedelta': relativedelta,
+                    'date': datetime.date,
+                    'today': today_date,
+                    'now': now_datetime,
+                    'uid': self.env.uid,
+                    'user': self.env.user,
+                }
+                domain = safe_eval(self.domain, eval_context)
             except Exception as e:
-                return f"Domain Error: {str(e)[:20]}"
+                _logger.error(f"Domain evaluation error in facilitator performance: {str(e)}")
+                # Continue with empty domain rather than failing
         
         # Apply facilitator filter if specified
         if self.facilitator_id:
             domain.append(('facilitator_id', '=', self.facilitator_id.id))
+        elif self.filter_by_current_user and self.env.user.partner_id.is_facilitator:
+            # If filter by current user is enabled and user is a facilitator
+            domain.append(('facilitator_id', '=', self.env.user.partner_id.id))
         
         # Get the participation records
-        participations = self.env['inclue.participation'].search(domain)
+        try:
+            # Check if model exists
+            if 'inclue.participation' not in self.env:
+                return "Model Not Found"
+                
+            participations = self.env['inclue.participation'].search(domain)
+        except Exception as e:
+            _logger.error(f"Search error in facilitator performance: {str(e)}")
+            return "Error"
         
         if not participations:
             return "0"
