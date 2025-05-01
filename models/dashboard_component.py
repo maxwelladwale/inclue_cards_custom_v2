@@ -70,7 +70,7 @@ class DashboardComponent(models.Model):
     def _compute_card_data(self):
         """Compute the data to be displayed on the card"""
         self.ensure_one()
-        
+
         # Special calculations for iN-Clue
         if self.calculation_type in ['completion_rate', 'facilitator_performance']:
             try:
@@ -81,18 +81,18 @@ class DashboardComponent(models.Model):
             except Exception as e:
                 _logger.error(f"Error in dashboard calculation: {str(e)}")
                 return f"Error: {str(e)[:20]}"
-        
+
         if not self.model_id:
             return self.card_value or "0"
-            
-        model_name = self.model_id.model
         
+        model_name = self.model_id.model
+
         # Check if model exists
         if not model_name in self.env:
             return "Model Not Found"
-            
-        model = self.env[model_name]
         
+        model = self.env[model_name]
+
         # Use safer domain evaluation with proper error handling
         try:
             # Create evaluation context with date/time functions
@@ -106,7 +106,7 @@ class DashboardComponent(models.Model):
                 'uid': self.env.uid,
                 'user': self.env.user,
             }
-            
+
             # For simple domains, use safe_eval with context
             if self.domain and self.domain != "[]":
                 try:
@@ -116,24 +116,51 @@ class DashboardComponent(models.Model):
                     domain = []
             else:
                 domain = []
-                
+
             # Add user filter if enabled
             if self.filter_by_current_user:
-                # Check if the model has user_id, partner_id, or create_uid fields
+                # Check the model and apply the relevant filter for the current user
                 fields_list = model.fields_get_keys()
-                if 'user_id' in fields_list:
-                    domain.append(('user_id', '=', self.env.uid))
-                elif 'facilitator_id' in fields_list:
-                    domain.append(('facilitator_id', '=', self.env.user.partner_id.id))
-                elif 'partner_id' in fields_list:
-                    domain.append(('partner_id', '=', self.env.user.partner_id.id))
-                elif 'create_uid' in fields_list:
-                    domain.append(('create_uid', '=', self.env.uid))
-                    
+                if model_name == 'inclue.participation':
+                    if self.env.user.partner_id.is_facilitator:
+                        # If user is a facilitator, filter by their facilitator_id
+                        domain.append(('facilitator_id', '=', self.env.user.partner_id.id))
+                        _logger.info(f"Applied facilitator filter: {self.env.user.partner_id.id}")
+                    else:
+                        # If user is a participant, filter by partner_id
+                        domain.append(('partner_id', '=', self.env.user.partner_id.id))
+                        _logger.info(f"Applied participant filter: {self.env.user.partner_id.id}")
+                elif model_name == 'event.event':
+                    if self.env.user.partner_id.is_facilitator:
+                        # If user is a facilitator, filter by their facilitator_id
+                        domain.append(('facilitator_id', '=', self.env.user.partner_id.id))
+                        _logger.info(f"Applied event facilitator filter: {self.env.user.partner_id.id}")
+                    else:
+                        # If user is not a facilitator, filter by create_uid (creator of the event)
+                        domain.append(('create_uid', '=', self.env.uid))
+                        _logger.info(f"Applied event creator filter: {self.env.uid}")
+                else:
+                    # For other models, apply user-specific filters based on available fields
+                    if 'user_id' in fields_list:
+                        domain.append(('user_id', '=', self.env.uid))
+                        _logger.info(f"Applied user_id filter: {self.env.uid}")
+                    elif 'facilitator_id' in fields_list:
+                        domain.append(('facilitator_id', '=', self.env.user.partner_id.id))
+                        _logger.info(f"Applied facilitator_id filter: {self.env.user.partner_id.id}")
+                    elif 'partner_id' in fields_list:
+                        domain.append(('partner_id', '=', self.env.user.partner_id.id))
+                        _logger.info(f"Applied partner_id filter: {self.env.user.partner_id.id}")
+                    elif 'create_uid' in fields_list:
+                        domain.append(('create_uid', '=', self.env.uid))
+                        _logger.info(f"Applied create_uid filter: {self.env.uid}")
+                    else:
+                        _logger.warning(f"No suitable field found for user filtering in model {model_name}")
+
         except Exception as e:
             _logger.error(f"Domain preparation error: {str(e)}")
             return f"Domain Error: {str(e)[:20]}"
         
+        # Now perform the actual calculation using the domain
         try:
             if self.calculation_type == 'count':
                 return str(model.search_count(domain))
@@ -147,7 +174,7 @@ class DashboardComponent(models.Model):
                     values = records.mapped(self.count_field)
                     if not values:
                         return "0"
-                        
+                    
                     if self.calculation_type == 'sum':
                         total = sum(values)
                         return str(total)
@@ -157,7 +184,7 @@ class DashboardComponent(models.Model):
                 except Exception as e:
                     _logger.error(f"Field mapping error: {str(e)}")
                     return f"Field Error: {str(e)[:20]}"
-                    
+                
             elif self.calculation_type == 'formula' and self.formula:
                 records = model.search(domain)
                 if not records:
@@ -189,7 +216,68 @@ class DashboardComponent(models.Model):
         except Exception as e:
             _logger.error(f"Card computation error: {str(e)}")
             return f"Error: {str(e)[:20]}"
+
     
+    # def _compute_completion_rate(self):
+    #     """Calculate survey completion rate"""
+    #     domain = []
+        
+    #     # Apply base domain if specified
+    #     if self.domain and self.domain != "[]":
+    #         try:
+    #             # Create evaluation context
+    #             eval_context = {
+    #                 'datetime': datetime,
+    #                 'relativedelta': relativedelta,
+    #                 'date': datetime.date,
+    #                 'fields': fields,
+    #                 'today': fields.Date.today(),
+    #                 'now': fields.Datetime.now(),
+    #                 'uid': self.env.uid,
+    #                 'user': self.env.user,
+    #             }
+    #             domain = safe_eval(self.domain, eval_context)
+    #         except Exception as e:
+    #             _logger.error(f"Domain evaluation error in completion rate: {str(e)}")
+    #             # Continue with empty domain rather than failing
+        
+    #     # Apply facilitator filter if specified
+    #     if self.facilitator_id:
+    #         domain.append(('facilitator_id', '=', self.facilitator_id.id))
+        
+    #     # Apply session type filter if specified
+    #     if self.session_type == 'kickoff':
+    #         domain.append(('session_type', '=', 'kickoff'))
+    #     elif self.session_type == 'followup':
+    #         domain.append(('session_type', '!=', 'kickoff'))
+            
+    #     # Add user filter if enabled
+    #     if self.filter_by_current_user:
+    #         # For inclue.participation, filter by facilitator if user is a facilitator
+    #         if self.env.user.partner_id.is_facilitator:
+    #             domain.append(('facilitator_id', '=', self.env.user.partner_id.id))
+        
+    #     # Get the participation records
+    #     try:
+    #         # Check if model exists
+    #         if 'inclue.participation' not in self.env:
+    #             return "Model Not Found"
+                
+    #         participations = self.env['inclue.participation'].search(domain)
+    #     except Exception as e:
+    #         _logger.error(f"Search error in completion rate: {str(e)}")
+    #         return "Error"
+        
+    #     if not participations:
+    #         return "0%"
+        
+    #     # Calculate completion rate
+    #     total = len(participations)
+    #     completed = len(participations.filtered(lambda p: p.completed))
+        
+    #     completion_rate = (completed / total) * 100 if total > 0 else 0
+    #     return f"{round(completion_rate)}%"
+
     def _compute_completion_rate(self):
         """Calculate survey completion rate"""
         domain = []
@@ -198,13 +286,15 @@ class DashboardComponent(models.Model):
         if self.domain and self.domain != "[]":
             try:
                 # Create evaluation context
+                today_date = fields.Date.today()
+                now_datetime = fields.Datetime.now()
+                
                 eval_context = {
                     'datetime': datetime,
                     'relativedelta': relativedelta,
                     'date': datetime.date,
-                    'fields': fields,
-                    'today': fields.Date.today(),
-                    'now': fields.Datetime.now(),
+                    'today': today_date,
+                    'now': now_datetime,
                     'uid': self.env.uid,
                     'user': self.env.user,
                 }
@@ -250,6 +340,72 @@ class DashboardComponent(models.Model):
         completion_rate = (completed / total) * 100 if total > 0 else 0
         return f"{round(completion_rate)}%"
     
+    # def _compute_facilitator_performance(self):
+    #     """Calculate facilitator performance metrics"""
+    #     domain = []
+        
+    #     # Apply base domain if specified
+    #     if self.domain and self.domain != "[]":
+    #         try:
+    #             # Create evaluation context
+    #             eval_context = {
+    #                 'datetime': datetime,
+    #                 'relativedelta': relativedelta,
+    #                 'date': datetime.date,
+    #                 'fields': fields,
+    #                 'today': fields.Date.today(),
+    #                 'now': fields.Datetime.now(),
+    #                 'uid': self.env.uid,
+    #                 'user': self.env.user,
+    #             }
+    #             domain = safe_eval(self.domain, eval_context)
+    #         except Exception as e:
+    #             _logger.error(f"Domain evaluation error in facilitator performance: {str(e)}")
+    #             # Continue with empty domain rather than failing
+        
+    #     # Apply facilitator filter if specified
+    #     if self.facilitator_id:
+    #         domain.append(('facilitator_id', '=', self.facilitator_id.id))
+    #     elif self.filter_by_current_user and self.env.user.partner_id.is_facilitator:
+    #         # If filter by current user is enabled and user is a facilitator
+    #         domain.append(('facilitator_id', '=', self.env.user.partner_id.id))
+        
+    #     # Get the participation records
+    #     try:
+    #         # Check if model exists
+    #         if 'inclue.participation' not in self.env:
+    #             return "Model Not Found"
+                
+    #         participations = self.env['inclue.participation'].search(domain)
+    #     except Exception as e:
+    #         _logger.error(f"Search error in facilitator performance: {str(e)}")
+    #         return "Error"
+        
+    #     if not participations:
+    #         return "0"
+        
+    #     # Get unique events facilitated
+    #     events = participations.mapped('event_id')
+        
+    #     # Get unique participants
+    #     participants = participations.mapped('partner_id')
+        
+    #     # Calculate completion rate
+    #     total = len(participations)
+    #     completed = len(participations.filtered(lambda p: p.completed))
+    #     completion_rate = (completed / total) * 100 if total > 0 else 0
+        
+    #     # Return the score based on what field is set to count
+    #     if self.count_field == 'events':
+    #         return str(len(events))
+    #     elif self.count_field == 'participants': 
+    #         return str(len(participants))
+    #     elif self.count_field == 'completion_rate':
+    #         return f"{round(completion_rate)}%"
+    #     else:
+    #         # Default to events count if no field specified
+    #         return str(len(events))
+
     def _compute_facilitator_performance(self):
         """Calculate facilitator performance metrics"""
         domain = []
@@ -258,13 +414,15 @@ class DashboardComponent(models.Model):
         if self.domain and self.domain != "[]":
             try:
                 # Create evaluation context
+                today_date = fields.Date.today()
+                now_datetime = fields.Datetime.now()
+                
                 eval_context = {
                     'datetime': datetime,
                     'relativedelta': relativedelta,
                     'date': datetime.date,
-                    'fields': fields,
-                    'today': fields.Date.today(),
-                    'now': fields.Datetime.now(),
+                    'today': today_date,
+                    'now': now_datetime,
                     'uid': self.env.uid,
                     'user': self.env.user,
                 }

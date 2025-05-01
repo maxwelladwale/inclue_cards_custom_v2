@@ -37,14 +37,18 @@ class DashboardController(http.Controller):
     def get_dashboard_components(self):
         """Return the full HTML for all dashboard components"""
         try:
-            # Render the dashboard template with current components
-            html = request.env['ir.ui.view'].render_template(
+            # Get components
+            components = request.env['dashboard.custom.component'].search([
+                ('is_active', '=', True), 
+                ('component_type', '=', 'card')
+            ], order='sequence')
+            
+            # In Odoo 16, we use _render instead of render_template
+            html = request.env['ir.qweb']._render(
                 'dashboard_custom.dashboard_snippet_content',
-                {'components': request.env['dashboard.custom.component'].search([
-                    ('is_active', '=', True), 
-                    ('component_type', '=', 'card')
-                ], order='sequence')}
+                {'components': components}
             )
+            
             return {'html': html}
         except Exception as e:
             _logger.error(f"Error getting dashboard components: {str(e)}")

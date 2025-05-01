@@ -12,7 +12,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/dashboard_templates.xml',
-        # 'views/dashboard_snippets.xml',
+        'views/dashboard_snippets.xml',
         'views/dashboard_views.xml',
     ],
     'assets': {
